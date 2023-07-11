@@ -42,8 +42,8 @@ int main(void) {
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-
-        glClearColor(0.2f, 0.1f, 0.1f, 1.0f);
+        transform(glm::vec2(1), glm::vec3(1), glm::vec3(1));
+        glClearColor(0.2f, 0.1f, 0.5f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glfwSwapBuffers(window);
