@@ -15,6 +15,8 @@ run_test:
 run:
 	./out/build/Debug/GraphicApp
 
+build_run: build run
+
 delete:
 	rm -rf out/build
 	cd out && mkdir build
