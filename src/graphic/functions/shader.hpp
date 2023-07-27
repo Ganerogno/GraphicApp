@@ -50,15 +50,15 @@ class Shader
 	}
 public:
 	Shader(const char* name, bool isVert, bool isFrag)
-	{
-		program = glCreateProgram();
-		if (isVert)
-			AddShader(PATH + name + ".vert", GL_VERTEX_SHADER);
-		if (isFrag)
-			AddShader(PATH + name + ".frag", GL_FRAGMENT_SHADER);
-
-		CreateProgram();
-	}
+		{
+			program = glCreateProgram();
+			if (isVert)
+				AddShader(PATH + name + ".vert", GL_VERTEX_SHADER);
+			if (isFrag)
+				AddShader(PATH + name + ".frag", GL_FRAGMENT_SHADER);
+	
+			CreateProgram();
+		}
 	
 	void Use()
 	{
