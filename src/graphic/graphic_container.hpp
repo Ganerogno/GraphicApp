@@ -67,6 +67,7 @@ class GraphicContainer
 
         glfwSetKeyCallback(window, key_callback);
         gladLoadGL();
+        glEnable(GL_DEPTH_TEST);
     }
     void start()
     {
@@ -111,21 +112,28 @@ class GraphicContainer
             GLint modelLoc = glGetUniformLocation(testShader.GetProgram(), "model");
             GLint projLoc = glGetUniformLocation(testShader.GetProgram(), "projection");
             GLint viewLoc = glGetUniformLocation(testShader.GetProgram(), "view");
-
+            GLint colorLoc = glGetUniformLocation(testShader.GetProgram(), "in_color");
+            float color1[4] = {1.0f, 0.0f, 0.0f, 1.0f};
+            float color2[4] = {0.0f, 1.0f, 0.0f, 1.0f};
         glClearColor(0.2f, 0.1f, 0.5f, 1.0f);
         while (!glfwWindowShouldClose(window)) 
         {
             glfwPollEvents();
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             testShader.Use();
+            model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
             glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
             glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            glUniform4fv(colorLoc, 1, color1);
             glBindVertexArray(VAO);
+            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            model = glm::rotate(glm::mat4(1.0f), glm::radians(-45.0f), glm::vec3(1.0f, 1.0f, 0.0f));
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            glUniform4fv(colorLoc, 1, color2);
             glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
             glBindVertexArray(0);
             testShader.UseBaseShader();
-
 
             glfwSwapBuffers(window);
         }
