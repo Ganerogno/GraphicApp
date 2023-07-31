@@ -1,3 +1,5 @@
+#pragma once
+
 class SlowStateInterface
 {
     bool trigger_condition();

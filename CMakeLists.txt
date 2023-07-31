@@ -6,9 +6,22 @@ find_package(OpenGL REQUIRED)
 
 project(GraphicApp CXX)
 
-add_executable(${PROJECT_NAME} src/main.cpp
+set(SOURCE 
+    src/graphic/functions/shader.cpp
+    src/graphic/graphic_objects/graphic_object.cpp
+    src/graphic/graphic_objects/test_object.cpp
+    src/graphic/graphic_container.cpp
+    src/main.cpp)
+
+set(HEADER 
     src/graphic/functions/shader.hpp
-    src/graphic/graphic_container.hpp
+    src/graphic/graphic_objects/render_interface.hpp
+    src/graphic/graphic_objects/slow_state_interface.hpp
+    src/graphic/graphic_objects/slow_state_interface.hpp
+    src/graphic/graphic_objects/graphic_object.hpp
+    src/graphic/graphic_objects/test_object.hpp
+    src/graphic/graphic_container.hpp)
+add_executable(${PROJECT_NAME} ${HEADER} ${SOURCE}
     )
 
 add_subdirectory(external/glfw)

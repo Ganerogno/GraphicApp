@@ -1,141 +1,128 @@
-#include <GLFW/glfw3.h>
-#include <glm/glm.hpp> // vec2, vec3, mat4, radians
-#include <glm/ext.hpp> // perspective, translate, rotate
+#pragma once
+#include <chrono>
+#include <thread>
+#include <map>
+#include <vector>
 
-#include "graphic/graphic_objects/graphic_object.hpp"
-#include "graphic/graphic_objects/slow_state_interface.hpp"
-#include "functions/shader.hpp"
+#include "graphic_objects/graphic_object.hpp"
+#include "graphic_objects/test_object.hpp"
+#include "graphic_objects/slow_state_interface.hpp"
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GL_TRUE);
-}
+#define CHUNK_SIZE 2
+
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
 class GraphicContainer
 {
-    class Settings
+    class Settings //Settings/////////////////////////
     {
+    public:
         int width;
         int height;
-        public:
+        GLFWwindow* window;
         Settings()
         {
             width = 800;
             height = 600;
+            glfwInit();
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+            window = glfwCreateWindow(width, height, "GraphicApp", NULL, NULL);
+
+            glfwMakeContextCurrent(window);
+            glfwSetKeyCallback(window, key_callback);
+            gladLoadGL();
+            glEnable(GL_DEPTH_TEST);
         }
-        int get_width() const
-        {
-            return width;
-        }
-        int get_height() const
-        {
-            return height;
-        }
     };
-    class Camera
+    static Settings settings;
+    static Shader default_shader;
+
+    class Camera : public StateInterface //Camera///////////////////////////
     {
-        glm::vec3 cameraPos;
-	    static glm::vec3 cameraDir;
-	    glm::vec3 cameraUp;
-	    GLfloat cameraSpeed = 0.05f;
-	    static glm::mat4x4 ViewMatrix;
-    };
-    class World : public GraphicObject, public SlowStateInterface
-    {
-
-    };
-    class Save
-    {
-
-    };
-    
-    Settings settings;
-    GLFWwindow* window;
-    glm::mat4 proj;
-    
-    public:
-    GraphicContainer()
-    {
-        glfwInit();
-
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-        window = glfwCreateWindow(settings.get_width(), settings.get_height(), "GraphicApp", NULL, NULL);
-        glfwMakeContextCurrent(window);
-
-        glfwSetKeyCallback(window, key_callback);
-        gladLoadGL();
-        glEnable(GL_DEPTH_TEST);
-    }
-    void start()
-    {
-        proj = glm::perspective( 45.0f, (GLfloat)settings.get_width()/(GLfloat)settings.get_height(), 0.1f, 100.0f);
-        glm::mat4 view = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.0f));
-        glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-        Shader testShader("test",true,true);
-        GLfloat vertices[] = {
-     0.5f,  0.5f, 0.0f,  // Верхний правый угол
-     0.5f, -0.5f, 0.0f,  // Нижний правый угол
-    -0.5f, -0.5f, 0.0f,  // Нижний левый угол
-    -0.5f,  0.5f, 0.0f   // Верхний левый угол
-        };
-        GLuint indices[] = {  // Помните, что мы начинаем с 0!
-            0, 1, 3,   // Первый треугольник
-            1, 2, 3    // Второй треугольник
-        };  
-        GLuint EBO;
-        glGenBuffers(1, &EBO);
-
-        GLuint VBO;
-        glGenBuffers(1, &VBO);
-        GLuint VAO;
-        glGenVertexArrays(1, &VAO);
-
-
-
-        glBindVertexArray(VAO);
-        // 2. Копируем наш массив вершин в буфер для OpenGL
-        glBindBuffer(GL_ARRAY_BUFFER, VBO); 
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); 
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-        // 3. Устанавливаем указатели на вершинные атрибуты 
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0); 
         
-            GLint modelLoc = glGetUniformLocation(testShader.GetProgram(), "model");
-            GLint projLoc = glGetUniformLocation(testShader.GetProgram(), "projection");
-            GLint viewLoc = glGetUniformLocation(testShader.GetProgram(), "view");
-            GLint colorLoc = glGetUniformLocation(testShader.GetProgram(), "in_color");
-            float color1[4] = {1.0f, 0.0f, 0.0f, 1.0f};
-            float color2[4] = {0.0f, 1.0f, 0.0f, 1.0f};
-        glClearColor(0.2f, 0.1f, 0.5f, 1.0f);
-        while (!glfwWindowShouldClose(window)) 
+        public:
+        glm::vec3 cameraPos;
+	    glm::vec3 cameraDir;
+	    glm::vec3 cameraUp;
+        glm::vec3 cameraRight;
+	    GLfloat cameraSpeed = 0.05f;
+	    glm::mat4x4 view;
+        
+        Camera() : Camera(glm::vec3(0.0f,0.0f,3.0f), glm::vec3(0.0f,0.0f,0.0f))
         {
-            glfwPollEvents();
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            testShader.Use();
-            model = glm::rotate(glm::mat4(1.0f), glm::radians(45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(proj));
-            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            glUniform4fv(colorLoc, 1, color1);
-            glBindVertexArray(VAO);
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-            model = glm::rotate(glm::mat4(1.0f), glm::radians(-45.0f), glm::vec3(1.0f, 1.0f, 0.0f));
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform4fv(colorLoc, 1, color2);
-            glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-            glBindVertexArray(0);
-            testShader.UseBaseShader();
 
-            glfwSwapBuffers(window);
         }
-    }
+        Camera(glm::vec3 pos, glm::vec3 target)
+        {
+            cameraPos = pos;
+            cameraDir = glm::normalize(target - pos);
+            glm::vec3 up = glm::vec3(0,1,0);
+            cameraRight = glm::normalize(glm::cross(up, cameraDir));
+            cameraUp = glm::normalize(glm::cross(cameraDir, cameraRight));
+            view = glm::lookAt(cameraPos, cameraDir + cameraPos, cameraUp);
+        }
+        void update() override
+        {
+            if(keys[GLFW_KEY_W])
+                cameraPos += cameraSpeed * cameraDir;
+            if(keys[GLFW_KEY_S])
+                cameraPos -= cameraSpeed * cameraDir;
+            if(keys[GLFW_KEY_A])
+                cameraPos -= glm::normalize(glm::cross(cameraDir, cameraUp)) * cameraSpeed;
+            if(keys[GLFW_KEY_D])
+                cameraPos += glm::normalize(glm::cross(cameraDir, cameraUp)) * cameraSpeed; 
+        }
+        glm::mat4 get_view()
+        {
+            return glm::lookAt(cameraPos, cameraDir + cameraPos, cameraUp);
+        }
+    };
+    class World : public GraphicObject, public SlowStateInterface //World/////////////////////////////
+    {
+        struct WorldKey //WorldKey///////////////////
+        {
+            int x;
+            int z;
+            WorldKey(int x, int z);
+            bool operator<(const WorldKey &ob) const;
+            bool operator==(const WorldKey &ob) const;
+        };
+        class Chunk : RenderInterface //Chunk//////////////////////
+        {
+        public:
+            Chunk();
+            Chunk(Shader& shader);
+            Chunk(const Chunk& other);
+            GLfloat color[4] = {0.0f,1.0f,0.0f,1.0f};
+            bool init() override;
+            void draw(glm::mat4 proj, glm::mat4 view) override;
+            int get_int(int num);
+        };
+        // Chunk chunk;
+        std::map<WorldKey, Chunk> chunks;
+    public:
+        World(Shader& shader);
+        bool init();
+        void draw(glm::mat4 proj, glm::mat4 view);
+        void update();
+
+    };
+    class Save //Save//////////////////////////
+    {
+
+    };
+    
+    Camera camera;
+    glm::mat4 proj;
+    World *world = nullptr;
+
+    public:
+    static bool keys[];
+    static const std::chrono::steady_clock::duration delta_time;
+
+    GraphicContainer();
+    void start();
 };
