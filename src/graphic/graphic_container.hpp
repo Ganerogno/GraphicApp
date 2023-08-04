@@ -8,7 +8,7 @@
 #include "graphic_objects/test_object.hpp"
 #include "graphic_objects/slow_state_interface.hpp"
 
-#define CHUNK_SIZE 2
+#define CHUNK_SIZE 10
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
 
@@ -51,7 +51,7 @@ class GraphicContainer
 	    GLfloat cameraSpeed = 0.05f;
 	    glm::mat4x4 view;
         
-        Camera() : Camera(glm::vec3(0.0f,0.0f,3.0f), glm::vec3(0.0f,0.0f,0.0f))
+        Camera() : Camera(glm::vec3(0.0f,2.0f,3.0f), glm::vec3(0.0f,2.0f,0.0f))
         {
 
         }
@@ -92,14 +92,14 @@ class GraphicContainer
         };
         class Chunk : RenderInterface //Chunk//////////////////////
         {
+            GLuint colorBO;
+            WorldKey key;
         public:
             Chunk();
-            Chunk(Shader& shader);
+            Chunk(Shader& shader, WorldKey key);
             Chunk(const Chunk& other);
-            GLfloat color[4] = {0.0f,1.0f,0.0f,1.0f};
             bool init() override;
             void draw(glm::mat4 proj, glm::mat4 view) override;
-            int get_int(int num);
         };
         // Chunk chunk;
         std::map<WorldKey, Chunk> chunks;
@@ -124,5 +124,6 @@ class GraphicContainer
     static const std::chrono::steady_clock::duration delta_time;
 
     GraphicContainer();
+    ~GraphicContainer();
     void start();
 };

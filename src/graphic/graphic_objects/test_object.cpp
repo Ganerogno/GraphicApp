@@ -16,7 +16,6 @@ bool TestObject::init()
     glBindVertexArray(0);
     
     model = glm::rotate(glm::mat4(1.0f), glm::radians(-45.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-    std::cout<<"Object: "<<shader.GetProgram()<<std::endl;
     return true;
 }
 void TestObject::draw(glm::mat4 proj, glm::mat4 view)
