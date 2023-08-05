@@ -8,9 +8,10 @@
 #include "graphic_objects/test_object.hpp"
 #include "graphic_objects/slow_state_interface.hpp"
 
-#define CHUNK_SIZE 10
+#define CHUNK_SIZE 16
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 class GraphicContainer
 {
@@ -20,35 +21,21 @@ class GraphicContainer
         int width;
         int height;
         GLFWwindow* window;
-        Settings()
-        {
-            width = 800;
-            height = 600;
-            glfwInit();
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-            glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-            glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-            window = glfwCreateWindow(width, height, "GraphicApp", NULL, NULL);
-
-            glfwMakeContextCurrent(window);
-            glfwSetKeyCallback(window, key_callback);
-            gladLoadGL();
-            glEnable(GL_DEPTH_TEST);
-        }
+        Settings();
     };
     static Settings settings;
     static Shader default_shader;
 
     class Camera : public StateInterface //Camera///////////////////////////
     {
-        
         public:
         glm::vec3 cameraPos;
-	    glm::vec3 cameraDir;
+	    static glm::vec3 cameraDir;
 	    glm::vec3 cameraUp;
         glm::vec3 cameraRight;
 	    GLfloat cameraSpeed = 0.05f;
+	    static GLfloat yaw;
+	    static GLfloat pitch;
 	    glm::mat4x4 view;
         
         Camera() : Camera(glm::vec3(0.0f,2.0f,3.0f), glm::vec3(0.0f,2.0f,0.0f))
@@ -79,6 +66,7 @@ class GraphicContainer
         {
             return glm::lookAt(cameraPos, cameraDir + cameraPos, cameraUp);
         }
+        
     };
     class World : public GraphicObject, public SlowStateInterface //World/////////////////////////////
     {
@@ -126,4 +114,5 @@ class GraphicContainer
     GraphicContainer();
     ~GraphicContainer();
     void start();
+    static void MoveMouse(GLFWwindow* window, double xpos, double ypos);
 };

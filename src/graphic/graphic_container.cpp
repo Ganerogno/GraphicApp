@@ -7,6 +7,9 @@ bool GraphicContainer::keys[91]{};
 const std::chrono::steady_clock::duration GraphicContainer::delta_time = std::chrono::milliseconds(16);
 GraphicContainer::Settings GraphicContainer::settings;
 Shader GraphicContainer::default_shader = Shader();
+glm::vec3 GraphicContainer::Camera::cameraDir = glm::vec3();
+GLfloat GraphicContainer::Camera::yaw = -90.0f;
+GLfloat GraphicContainer::Camera::pitch = 0.0f;
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mode) {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -24,7 +27,29 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
         }
     }
 }
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    GraphicContainer::MoveMouse(window, xpos, ypos);
+}
+GraphicContainer::Settings::Settings()
+{
+    width = 800;
+    height = 600;
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    window = glfwCreateWindow(width, height, "GraphicApp", NULL, NULL);
+
+    glfwMakeContextCurrent(window);
+    glfwSetKeyCallback(window, key_callback);
+    glfwSetScrollCallback(window,mouse_callback);
+    glfwSetWindowPos(window, 400, 100);
+    glfwSetCursorPos(window, 400, 400);
+    gladLoadGL();
+    glEnable(GL_DEPTH_TEST);
+}
 GraphicContainer::World::WorldKey::WorldKey(int x, int z): x(x),z(z)
 {
     
@@ -199,4 +224,26 @@ void GraphicContainer::start()
             std::this_thread::sleep_until(start_time + delta_time);
         }
     }
+}
+void GraphicContainer::MoveMouse(GLFWwindow* window, double xpos, double ypos)
+{
+    GLfloat sensitivity = 5;
+    xpos *= sensitivity;
+    ypos *= sensitivity;
+
+    Camera::yaw += xpos;
+    Camera::pitch -= ypos;
+
+    glfwSetCursorPos(window, 400, 400);
+
+    if (Camera::pitch > 89.0f)
+        Camera::pitch = 89.0f;
+    if (Camera::pitch < -89.0f)
+        Camera::pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(Camera::yaw)) * cos(glm::radians(Camera::pitch));
+    front.y = sin(glm::radians(Camera::pitch));
+    front.z = sin(glm::radians(Camera::yaw)) * cos(glm::radians(Camera::pitch));
+    Camera::cameraDir = glm::normalize(front);
 }
