@@ -8,6 +8,7 @@ const std::chrono::steady_clock::duration GraphicContainer::delta_time = std::ch
 GraphicContainer::Settings GraphicContainer::settings;
 Shader GraphicContainer::default_shader = Shader();
 glm::vec3 GraphicContainer::Camera::cameraDir = glm::vec3();
+glm::vec3 GraphicContainer::Camera::position = glm::vec3();
 GLfloat GraphicContainer::Camera::yaw = -90.0f;
 GLfloat GraphicContainer::Camera::pitch = 0.0f;
 
@@ -48,17 +49,49 @@ GraphicContainer::Settings::Settings()
     glfwSetWindowPos(window, 400, 100);
     glfwSetCursorPos(window, 400, 400);
     gladLoadGL();
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     glEnable(GL_DEPTH_TEST);
+
+    can_fly = false;
+}
+GraphicContainer::World::WorldKey::WorldKey(): x(0),z(0)
+{
+    
 }
 GraphicContainer::World::WorldKey::WorldKey(int x, int z): x(x),z(z)
 {
     
 }
-bool GraphicContainer::World::WorldKey::operator<(const WorldKey &ob) const {
+bool GraphicContainer::World::WorldKey::operator<(const WorldKey &ob) const 
+{
     return x < ob.x || (x == ob.x && z < ob.z);
 }
-bool GraphicContainer::World::WorldKey::operator==(const WorldKey &ob) const {
+bool GraphicContainer::World::WorldKey::operator==(const WorldKey &ob) const 
+{
     return x == ob.x && z == ob.z;
+}
+bool GraphicContainer::World::WorldKey::operator!=(const WorldKey &ob) const 
+{
+    return x != ob.x || z != ob.z;
+}
+GraphicContainer::World::WorldKey& GraphicContainer::World::WorldKey::operator=(const WorldKey &ob)
+{
+    x = ob.x;
+    z = ob.z;
+    return *this;
+}
+GraphicContainer::World::WorldKey GraphicContainer::World::WorldKey::create_from_coordinates(glm::vec3 coordinates)
+{
+    WorldKey key(coordinates.x/(CHUNK_SIZE-1), coordinates.z/(CHUNK_SIZE-1));
+    if(coordinates.x < 0)
+    {
+        key.x--;
+    }
+    if(coordinates.z < 0)
+    {
+        key.z--;
+    }
+    return key;
 }
 
 GraphicContainer::World::Chunk::Chunk() : RenderInterface(default_shader), key(0,0){}
@@ -96,16 +129,7 @@ bool GraphicContainer::World::Chunk::init()
             indices.push_back((i + 1) * CHUNK_SIZE + j);
         }
     }
-    std::vector<GLfloat> colors;
-    for(int i = 0; i < CHUNK_SIZE; i++)
-    {
-        for(int j = 0; j < CHUNK_SIZE; j++)
-        {
-            colors.push_back(0.1 + rand()%21/(float)100);
-            colors.push_back(0.8 + rand()%21/(float)100);
-            colors.push_back(0.2 + rand()%21/(float)100);
-        }
-    }
+    
     indicies_count = indices.size();
     glGenBuffers(1, &EBO);
     glGenBuffers(1, &VBO);
@@ -120,14 +144,7 @@ bool GraphicContainer::World::Chunk::init()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLfloat), &indices[0], GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, colorBO); 
-    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(GLfloat), &colors[0], GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-    glEnableVertexAttribArray(0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    set_color(glm::vec3(0.1f,0.8f,0.2f));
     glBindVertexArray(0);
     
     model = glm::mat4(1.0f);
@@ -148,11 +165,32 @@ void GraphicContainer::World::Chunk::draw(glm::mat4 proj, glm::mat4 view)
     glBindVertexArray(0);
     shader.UseBaseShader();
 }
+void GraphicContainer::World::Chunk::set_color(glm::vec3 color)
+{
+    std::vector<GLfloat> colors;
+    for(int i = 0; i < CHUNK_SIZE; i++)
+    {
+        for(int j = 0; j < CHUNK_SIZE; j++)
+        {
+            colors.push_back(color.r);
+            colors.push_back(color.g);
+            colors.push_back(color.b);
+        }
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, colorBO); 
+    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(GLfloat), &colors[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+    glEnableVertexAttribArray(0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
 GraphicContainer::World::World(Shader& shader) : GraphicObject(shader)
 {
-    for(int i = -2; i <= 2 ; i++)
+    for(int i = -3; i <= 3 ; i++)
     {
-        for(int j = -2; j <= 2 ; j++)
+        for(int j = -3; j <= 3 ; j++)
         {
             chunks.emplace(WorldKey(i,j),Chunk(shader,WorldKey(i,j)));
         }
@@ -187,7 +225,15 @@ void GraphicContainer::World::draw(glm::mat4 proj, glm::mat4 view)
 }
 void GraphicContainer::World::update()
 {
-
+    WorldKey current_key = WorldKey::create_from_coordinates(Camera::position);
+    std::cout<<"position: "<<Camera::position.x<<" "<<Camera::position.z<<std::endl;
+    std::cout<<"index "<<current_key.x<<" "<<current_key.z<<std::endl;
+    if(key_to_chunk_with_camera != current_key)
+    {
+        chunks.at(key_to_chunk_with_camera).set_color(glm::vec3(0.1f,0.8f,0.2f));
+        chunks.at(current_key).set_color(glm::vec3(0.8f,0.8f,0.1f));
+        key_to_chunk_with_camera = current_key;
+    }
 }
 GraphicContainer::GraphicContainer()
 {
@@ -216,6 +262,7 @@ void GraphicContainer::start()
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         camera.update();
+        world->update();
         object.draw(proj,camera.get_view());
         world->draw(proj,camera.get_view());
         glfwSwapBuffers(settings.window);
